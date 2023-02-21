@@ -1,28 +1,33 @@
-//import 'dart:html';
-
+import 'dart:math';
 import 'dart:ui';
-
 import 'package:background_sms/background_sms.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-// import 'package:hardware_buttons/hardware_buttons.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:moss_project/auth.dart/main.dart';
 import 'package:lite_rolling_switch/lite_rolling_switch.dart';
 import 'package:moss_project/db.dart/dbservices.dart';
 import 'package:moss_project/model.dart/contacts.dart';
+import 'package:moss_project/pages.dart/ambulanceemergency.dart';
+import 'package:moss_project/pages.dart/emergencycall.dart';
 import 'package:moss_project/pages.dart/gesture.dart';
-
+import 'package:moss_project/pages.dart/policeemergency.dart';
+import 'package:moss_project/pages.dart/sendlocation.dart';
+import 'package:moss_project/pages.dart/shake.dart';
+import 'package:moss_project/pages.dart/sossiren.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../component/PrimaryButton.dart';
 import '../db.dart/dbservices.dart';
 import '../Pages.dart/addcontacts.dart';
-
-//import 'dart:html';
 import 'package:intl/intl_standalone.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'package:shake/shake.dart';
+import 'package:flutter_switch/flutter_switch.dart';
+
+import 'getlocation.dart';
 
 class SafeHome extends StatefulWidget {
   @override
@@ -33,28 +38,122 @@ class _SafeHomeState extends State<SafeHome> {
   Position? _curentPosition;
   String? _curentAddress;
   LocationPermission? permission;
- 
-
-  //  @override
-  //  void initState(){
-  //    super.initState();
-  //    _getPermission();
-  //    _getCurrentLocation();
-  //  }
-
-   final audioPlayer =AudioPlayer();
+  final audioPlayer =AudioPlayer();
   bool isPlaying=false;
   Duration duration=Duration.zero;
   Duration position = Duration.zero;
+  bool status1 = false;
+  var shakeThresholdGravity = 2.7;
+  int mShakeTimestamp = DateTime.now().millisecondsSinceEpoch;
+  int mShakeCount = 0;
+  int shakeCountResetTime = 3000;
+
+  int shakeSlopTimeMS = 500;
+  int minimumShakeCount = 2 ;
 
    @override
   void initState(){
-    super.initState();
-    _getPermission();
-     _getCurrentLocation();
+  super.initState();
+  _getPermission();
+  _getCurrentLocation();
+   setAudio();
+   
+  
+  
+  onPause(){}
 
-    setAudio();
-    //super.initState();
+  // var shakeThresholdGravity = 2.7;
+  // int mShakeTimestamp = DateTime.now().millisecondsSinceEpoch;
+  // int mShakeCount = 0;
+  // int shakeCountResetTime = 3000;
+
+  // int shakeSlopTimeMS = 500;
+  // int minimumShakeCount = 2 ;
+
+  
+
+   shakeGesture() {
+    accelerometerEvents.listen(
+      (AccelerometerEvent event) async {
+        double x = event.x;
+        double y = event.y;
+        double z = event.z;
+
+        double gX = x / 9.80665;
+        double gY = y / 9.80665;
+        double gZ = z / 9.80665;
+
+        // gForce will be close to 1 when there is no movement.
+        double gForce = sqrt(gX * gX + gY * gY + gZ * gZ);
+
+        if (gForce > shakeThresholdGravity) {
+          var now = DateTime.now().millisecondsSinceEpoch;
+          // ignore shake events too close to each other (500ms)
+          if (mShakeTimestamp + shakeSlopTimeMS > now) {
+            return;
+          }
+
+          // reset the shake count after 3 seconds of no shakes
+          if (mShakeTimestamp + shakeCountResetTime < now) {
+            mShakeCount = 0;
+          }
+
+          mShakeTimestamp = now;
+          mShakeCount++;
+
+        if (mShakeCount == minimumShakeCount) {
+        List<Tcontact> contactList = await DatabaseHelper().getContactList();
+        var status = await Permission.phone.status;
+        if (status.isGranted) {
+          if (mounted) {
+             contactList.forEach((element) {
+            FlutterPhoneDirectCaller.callNumber("${element.number}");
+          });
+          }
+          
+        } else {
+          var statuss = await Permission.phone.request();
+          if (statuss.isGranted) {
+            contactList.forEach((element) {
+              FlutterPhoneDirectCaller.callNumber("${element.number}");
+            });
+          } else {
+            Permission.phone.request();
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                content: Text("Can't call"),
+              ),
+            );
+          }
+        }
+          String recipients = "contactList";
+                      
+
+                      String messageBody =
+                          "https://www.google.com/maps/search/?api=1&query=${_curentPosition!.latitude}%2C${_curentPosition!.longitude}. $_curentAddress";
+                      if (await _isPermissionGranted()) {
+                        //if((await _supportCustomSim)!)
+                        contactList.forEach((element) {
+                          _sendSms("${element.number}",
+                              "I am in trouble $messageBody");
+                        });
+                      } else {
+                        _getPermission();
+                        Fluttertoast.showToast(msg: "something wrong");
+                     }
+       
+
+
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Shaked ")));
+          }
+        }
+      },
+    );
+  }
+
+    
+    shakeGesture();
    
 
     //listen to states:playing,paused,stopped
@@ -88,12 +187,6 @@ class _SafeHomeState extends State<SafeHome> {
   String url='https://mobcup.net/d/6o8nslkl/mp3';
   audioPlayer.setSourceUrl(url);
   }
-
-  // final player=AudioCache(prefix: 'assets/');
-  // final url=await player.load('siren.mp3');
-  // audioPlayer.setUrl(url.path inLocal:true);
-  // }
-
 
    @override
   void dispose() {
@@ -243,42 +336,8 @@ class _SafeHomeState extends State<SafeHome> {
       Fluttertoast.showToast(msg: e.toString());
     }
   }
-
- 
-
   
-
-
-  
-
-
-  showModelSafeHome(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height / 2,
-          child: Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "SEND YOUR CUURENT LOCATION IMMEDIATELY TO YOU EMERGENCY CONTACTS",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20),
-                ),
-                SizedBox(height: 10),
-                if (_curentPosition != null) Text(_curentAddress!),
-                PrimaryButton(
-                    title: "GET LOCATION",
-                    onPressed: () {
-                      _getCurrentLocation();
-                    }),
-                SizedBox(height: 10),
-                PrimaryButton(
-                    title: "SEND ALERT",
-                    onPressed: () async {
+  sendcurrentlocation() async {
                       String recipients = "contactList";
                       List<Tcontact> contactList =
                           await DatabaseHelper().getContactList();
@@ -298,101 +357,13 @@ class _SafeHomeState extends State<SafeHome> {
                      // else{
                       //  _getPermission();
                       //}//
-                    }),
-              ],
-            ),
-          ),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              )),
-        );
-      },
-    );
+                    }
 
-
-    
+  _callNumber(String number) async {
+    await FlutterPhoneDirectCaller.callNumber(number);
   }
 
- 
-
-   EmergencyCall(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height / 2,
-          child: Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //crossAxisAlignment: CrossAxisAlignment.start,
-                
-                children: [
-                  Text(
-                    'Shake your phone to Call',
-                    textAlign: TextAlign.start,
-                    
-                    style: TextStyle(fontSize: 23),
-                    ),
-                  LiteRollingSwitch(
-                  value: false,
-                  onChanged: (bool state) {
-                    print('turned ${(state) ? 'on' : 'off'}');
-                  },
-                  width: 80,
-                  iconOn: Icons.call,
-                  iconOff: Icons.call,
-                  colorOn: Colors.green,
-                  colorOff: Colors.red,
-                  onDoubleTap: () {},
-                  onSwipe: () {},
-                  onTap: () {
-                   
-                  },
-            ),
-                ],
-              ),
-
-            //Customized
-            // Padding(
-            //   padding: const EdgeInsets.only(top: 20),
-            //   child: LiteRollingSwitch(
-            //     value: true,
-            //     width: 150,
-            //     textOn: 'active',
-            //     textOff: 'inactive',
-            //     colorOn: Colors.deepOrange,
-            //     colorOff: Colors.blueGrey,
-            //     iconOn: Icons.lightbulb_outline,
-            //     iconOff: Icons.power_settings_new,
-            //     animationDuration: const Duration(milliseconds: 300),
-            //     onChanged: (bool state) {
-            //       print('turned ${(state) ? 'on' : 'off'}');
-            //     },
-            //     onDoubleTap: () {},
-            //     onSwipe: () {},
-            //     onTap: () {},
-            //   ),
-            // ),
-
-            SizedBox(height: 80,),
-                Text(
-                  " Call Your Emergency Contacts ",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 23),
-                ),
-                SizedBox(height: 10),
-                //if (_curentPosition != null) Text(_curentAddress!),
-                
-                PrimaryButton(
-                    title: " Call ",
-                    onPressed: () async {
+   EmergencyCall() async {
                       List<Tcontact> contactList =
                           await DatabaseHelper().getContactList();
 
@@ -418,77 +389,15 @@ class _SafeHomeState extends State<SafeHome> {
                        content: Text("can't call"),
                        ));
                             }
-
-
-                      //String recipients = "contactList";
-                     //List<Tcontact> contactList =
-                        //  await DatabaseHelper().getContactList();
-
-                     
-                       //if (await _isP\ermissionGranted()) {
-                        //if((await _supportCustomSim)!)
-                        //contactList.forEach((element) {
-                          //FlutterPhoneDirectCaller.callNumber("${element.number}");
-                        //});
-                     /// } //else {
-                        //_getPermission();
-                       // Fluttertoast.showToast(msg: "something wrong");
-                    // }
                     }
-                    ),
-                
-              ],
-            ),
-          ),
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              )),
-        );
-      },
-    );
-
-    
 
 
-
- //  @override
-  // void initState() {
-  //   super.initState();
-  //   WidgetsBinding.instance.addPostFrameCallback((_) => _overridePowerButton());
-  // }
-  //  }  
-  
-
-  // void _overridePowerButton() {
-  //   _powerButtonPressCount++;
-  //   if(_powerButtonPressCount == 5) {
-
-  //     // Add your code here to handle the power button press
-  //     EmergencyCall(context);
-      
-
-  //     _powerButtonPressCount = 0;
-  //   }
-  // }
-  //  @override
-  // void initState() {
-  //   super.initState();
-  //   WidgetsBinding.instance.addPostFrameCallback((_) => _overridePowerButton());
-  // }
-  //  }
+       
+     
    
+
+
   
- 
-
- 
-
-   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -500,138 +409,43 @@ class _SafeHomeState extends State<SafeHome> {
         ),
       body: Column(
         children: [
+       
+          SizedBox(height: 20.0),
+
+          //to get current location
           InkWell(
-            onTap: () => showModelSafeHome(context),
-             
-            child: Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: SizedBox(
-                
-                child: Container(
-                  height: 80,
-                  width: MediaQuery.of(context).size.width*0.95 ,
-                  //decoration: BoxDecoration(),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Column(
-                        children: [
-                          ListTile(
-                            title: Text("Send Location"),
-                            subtitle: Text("Share Location"),
-                          ),
-                          
-
-                        ],
-                      )
-                      ),
-                      //ClipRRect(
-                         // borderRadius: BorderRadius.circular(20),
-                          //child: Image.asset('assets/route.jpg')),
-                    ],
-                  ),
-                ),
-              ),
+            onTap:()=> _getCurrentLocation(),
+           // onTap:()=>,
+            child: getLocation(),
             ),
-            
-          ),
-
-        //  SecondaryButton(title: "Call Your Emergency Contacts", subtitle: "Call", onTap: EmergencyCall(context))
+          //to send current location directly through message to trusted contacts
           InkWell(
-            onTap: () => EmergencyCall(context),
-             
-            child: Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: SizedBox(
-                
-                child: Container(
-                  height: 80,
-                  width: MediaQuery.of(context).size.width*0.95 ,
-                  //decoration: BoxDecoration(),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Column(
-                            
-                        children: [
-                          ListTile(
-                            title: Text("Call Your Emergency Contacts"),
-                            subtitle: Text("Call"),
-                          ),
-                          
-
-                        ],
-                      )
-                      ),
-                      //ClipRRect(
-                         // borderRadius: BorderRadius.circular(20),
-                          //child: Image.asset('assets/route.jpg')),
-                    ],
-                  ),
-                ),
-              ),
+            onTap: () => sendcurrentlocation(),
+            child: sendLocation(),
             ),
+          //to make direct emergency call to trusted contacts
+          InkWell(
+            onTap: () => EmergencyCall(),
             
+            child: emergencyCall(),
           ),
+          //to call police
+          InkWell(
+            onTap: () =>_callNumber('100') ,
+            child: policeEmergency(),
+          ),
+          //to call ambulance
+          InkWell(
+            onTap: () =>_callNumber('112') ,
+            child: ambulanceEmergency(),
+          ),
+          //to play false alarm
           InkWell(
             onTap: () => FalseAlarm(context),
-             
-            child: Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: SizedBox(
-                
-                child: Container(
-                  height: 80,
-                  width: MediaQuery.of(context).size.width*0.95 ,
-                  // decoration: BoxDecoration(
-                  //   color: Colors.white
-                  // ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Column(
-                            
-                        children: [
-                          ListTile(
-                            
-                            title: Text("S.O.S Siren"),
-                            subtitle: Text("Set False Alarm"),
-                          ),
-                          
-
-                        ],
-                      )
-                      ),
-                      //ClipRRect(
-                         // borderRadius: BorderRadius.circular(20),
-                          //child: Image.asset('assets/route.jpg')),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            
+            child: sosSiren(),
           ),
-
-          
-         
-         
-
-         
-          
-        ],
+          ],
       ),
-      
-       
-    );
+      );
   }
 }
