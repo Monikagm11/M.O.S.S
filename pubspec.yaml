@@ -71,7 +71,32 @@ dependencies:
   lite_rolling_switch: ^1.0.0
   flutter_switch: ^0.3.2
   workmanager: ^0.5.1
+  flutter_pdfview: ^1.2.5
+  path_provider: ^2.0.13
+  speech_to_text: ^6.1.1
+  avatar_glow: ^2.0.2
+  email_auth: ^1.0.0
+  google_sign_in: ^6.0.2
+  url_launcher: ^6.1.10
+  provider: ^6.0.5
+  flutter_sound: ^9.2.13
+   
+ # firebase_storage: ^11.0.15
+ # flutter_pdfview: ^1.2.5
+  #path_provider: ^2.0.13
+  #speech_to_text: ^6.1.1
+  #avatar_glow:
+  #image_picker: ^0.8.6+4
+  #get: ^4.6.5
+  #email_auth: ^1.0.0
+#   flutter_launcher_icons: ^0.8.1
   
+# flutter_icons:
+# image_path: "assets/logo.jpg"
+# #image_path_android: "assets/android/logo.jpg"
+# #image_path_ios: "assets/ios/logo.jpg"
+# android: true
+# ios: true  
   
   
 
@@ -119,13 +144,13 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
+  fonts:
   
 
   
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
+    - family: NotoSansJP
+      fonts:
+        - asset: fonts/NotoSansJP-Light.otf
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro

@@ -1,17 +1,22 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:moss_project/pages.dart/gesture.dart';
-import 'package:moss_project/pages.dart/shake.dart';
-import 'package:moss_project/pages.dart/sos.dart';
-import 'package:moss_project/pages.dart/splashscreen.dart';
-import 'package:moss_project/pages.dart/trustedContactPage.dart';
+import 'package:moss_project/screens/bottomscreen.dart';
+//import 'package:moss_project/pages.dart/gesture.dart';
+import 'package:moss_project/pages.dart/home/home_screen.dart';
+import '../pages.dart/emergencysos/shake.dart';
+import 'package:moss_project/pages.dart/emergencysos/sos.dart';
+import 'package:moss_project/pages.dart/authentication/splashscreen.dart';
+import 'package:moss_project/pages.dart/profilepage/trustedContactPage.dart';
+import '../pages.dart/home/voice_cmd.dart';
 //import'../Auth.dart/auth_page.dart';
-import '../Pages.dart/home_page.dart';
+import '../pages.dart/home/home_page.dart';
 import 'package:flutter/material.dart';
-import 'package:moss_project/Pages.dart/actualpage.dart';
-import 'package:moss_project/pages.dart/registerpage.dart';
-import '../Pages.dart/login_page.dart';
+import '../auth.dart/actualpage.dart';
+import 'package:moss_project/pages.dart/authentication/registerpage.dart';
+import '../pages.dart/authentication/login_page.dart';
+import 'package:get/get.dart';
 import'package:workmanager/workmanager.dart';
+import 'package:provider/provider.dart';
 //import 'package:background_fetch/background_fetch.dart';
 //import 'dart:html';
 //import 'package:intl/intl_standalone.dart';
@@ -33,9 +38,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       home: SplashScreen(),
+      //home:const VoiceCommand(),
+     // home:BottomPage(),
       
       //home:TrustedContactPage(),
       //home:SafeHome(),

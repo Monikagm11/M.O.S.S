@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:moss_project/Pages.dart/login_page.dart';
-import '../Pages.dart/registerpage.dart';
+import '../pages.dart/authentication/login_page.dart';
+import '../pages.dart/authentication/registerpage.dart';
 
 
 
